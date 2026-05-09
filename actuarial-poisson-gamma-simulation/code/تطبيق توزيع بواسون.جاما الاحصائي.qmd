@@ -1,0 +1,131 @@
+---
+title: "تطبيق توزيع بواسون.جاما الاحصائي"
+author: "Islam Mohammed | محلل اكتواري"
+date: "2025"
+format: 
+  html:
+    theme: cosmo
+    toc: true
+    toc-title: "المحتويات"
+    code-fold: true
+    echo: true
+    message: false
+    warning: false
+    self-contained: true
+lang: ar
+---
+
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| lable: setup
+
+library(tidyverse) # لمعالجة الجداول والرسم البياني
+library(lubridate) # للتحكم الاحترافي بالتواريخ
+library(RSQLite)   # لإنشاء محرك قاعدة بيانات SQL داخل ا
+library(DBI)       # لتسهيل الاتصال بين R وقواعد البيانات
+library(dplyr)
+library(knitr)
+library(broom)
+library(ggplot2)
+set.seed(2026)     #  تثبيت العشوائية لضمان مصداقية التقرير المهني
+
+```
+
+##اكتواري 
+---
+
+
+
+###  **محاكاة بيانات 1000 سيارة سنقوم بالتامين عليها**
+
+
+```{r}
+#| echo: true
+  set.seed(2026)   #توحيد النتائج
+
+Insuranse_Cars1 <- data.frame(
+  Policy_ID = 1:1000,
+  Gender = sample(c("Male", "Famele"), 1000, replace = TRUE),
+  Age = sample(18:70, 1000, replace = TRUE),
+  City = sample(c("Jeddah", "Riyadh", "Damam"), 1000, replace = TRUE)
+               )
+```
+
+
+
+
+###    نقوم باستدعاء توزيع بواسون الاحصائي المستخصص في الاحداث المتوقعه والمتكرره
+
+
+
+
+```{r}
+set.seed(2026) 
+# محاكاة مطالبات مستقبيلة باستخدام توزيع بواسون
+# lambda = 0.05 تعني أننا نتوقع حادثاً لكل 20 سيارة تقريباً
+Insuranse_Cars1$Num_claims <- rpois(1000, lambda = 0.05) 
+
+```
+
+```{r}
+#| include: false
+print("--- توزيع عدد المطالبات في محفظتك التأمينية ---")
+print(table(Insuranse_Cars1$Num_claims))
+
+```        
+
+
+### حساب تكاليف المطالبات 
+
+
+
+
+```{r}
+#| echo: true
+set.seed(2026)    #توحيد النتائج
+# حساب تكاليف المطالبات باستخدام توزيع جاما
+# الحل الأفضل لتفادي خطأ ifelse هو حساب عدد الصفوف التي تحتاج مبالغ فعلاً
+num_actual_claims <- sum(Insuranse_Cars1$Num_claims > 0)
+
+# إنشاء عمود التكلفة وتصفيره
+Insuranse_Cars1$Claim_cost <- 0
+
+# تخصيص مبالغ فقط لمن لديهم مطالبات > 0
+if(num_actual_claims > 0) {
+  Insuranse_Cars1$Claim_cost[Insuranse_Cars1$Num_claims> 0] <- 
+    rgamma(num_actual_claims, shape = 2, scale = 2500)
+}
+
+```
+
+```{r}
+#| include: false
+print("--- إجمالي المبالغ المتوقع دفعها كمطالبات ---")
+total_sum <- sum(Insuranse_Cars1$Claim_cost)
+print(round(total_sum, 1))
+
+```         
+
+
+
+
+
+```{r}
+
+ggplot(Insuranse_Cars1 %>% filter(Claim_cost > 0), aes(x = Claim_cost)) +
+  geom_histogram(fill = "steelblue", color = "white", bins = 30) +
+  labs(title = "توزيع شدة المطالبات (Gamma Distribution)",
+       x = "قيمة المطالبة", y = "التكرار") +
+  theme_minimal()
+
+```
+
+```{r}
+ggsave(filename = "output/gamma_disturibution_plot.png")
+
+
+```
+
